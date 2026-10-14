@@ -1,0 +1,8 @@
+{
+  "name": "Remix: AI Smart Support Ticket System",
+  "description": "Full-stack AI customer support ticket CRM utilizing Gemini 2.5 Flash for automated triage, solutions matching, and staff analytics dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

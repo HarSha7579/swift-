@@ -1,0 +1,163 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               Int               @id @default(autoincrement())
+  email            String            @unique
+  password         String
+  name             String
+  role             String            @default("CUSTOMER") // CUSTOMER, AGENT, ADMIN
+  isAvailable      Boolean           @default(true)      // For Agents
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // Profile Info
+  username         String?           @unique
+  profilePicture   String?
+  phone            String?
+  bio              String?
+
+  // Relationships
+  customerTickets  Ticket[]          @relation("CustomerTickets")
+  agentTickets     Ticket[]          @relation("AgentTickets")
+  messages         TicketMessage[]
+  historyEntries   TicketHistory[]
+  notifications    Notification[]
+  sentChat         InternalMessage[] @relation("SentChat")
+  receivedChat     InternalMessage[] @relation("ReceivedChat")
+  kbArticles       KnowledgeBase[]   @relation("KbCreatedBy")
+
+  @@map("users")
+}
+
+model Ticket {
+  id            Int                @id @default(autoincrement())
+  subject       String
+  description   String
+  category      String             // Predicted or updated
+  priority      String             // LOW, MEDIUM, HIGH, URGENT
+  status        String             // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  aiCategory    String?
+  aiPriority    String?
+  aiSolutions   String?            // JSON stringified array
+  aiKbArticles  String?            // JSON stringified array
+  aiReason      String?
+  aiConfidence  Float?
+  aiUrgency     String?
+  aiImpact      String?
+  aiPrimaryIssue String?
+  customerId    Int
+  agentId       Int?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  // Relationships
+  customer      User               @relation("CustomerTickets", fields: [customerId], references: [id])
+  agent         User?              @relation("AgentTickets", fields: [agentId], references: [id])
+  messages      TicketMessage[]
+  attachments   TicketAttachment[]
+  history       TicketHistory[]
+
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  senderId  Int
+  message   String
+  createdAt DateTime @default(now())
+
+  // Relationships
+  ticket      Ticket             @relation(fields: [ticketId], references: [id])
+  sender      User               @relation(fields: [senderId], references: [id])
+  attachments TicketAttachment[]
+
+  @@map("ticket_messages")
+}
+
+model TicketAttachment {
+  id              Int            @id @default(autoincrement())
+  ticketId        Int?
+  ticketMessageId Int?
+  url             String
+  fileName        String
+  fileType        String
+  createdAt       DateTime       @default(now())
+
+  // Relationships
+  ticket        Ticket?          @relation(fields: [ticketId], references: [id])
+  ticketMessage TicketMessage?   @relation(fields: [ticketMessageId], references: [id])
+
+  @@map("ticket_attachments")
+}
+
+model TicketHistory {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  changedBy Int
+  action    String
+  createdAt DateTime @default(now())
+
+  // Relationships
+  ticket Ticket @relation(fields: [ticketId], references: [id])
+  user   User   @relation(fields: [changedBy], references: [id])
+
+  @@map("ticket_history")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model KnowledgeBase {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String?  // Made optional for backward compatibility
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Extended fields
+  problem     String?
+  solution    String?
+  tags        String?
+  createdById Int?
+
+  // Relationships
+  createdBy   User?    @relation("KbCreatedBy", fields: [createdById], references: [id])
+
+  @@map("knowledge_base")
+}
+
+model InternalMessage {
+  id             Int      @id @default(autoincrement())
+  senderId       Int
+  receiverId     Int
+  message        String
+  attachmentUrl  String?
+  attachmentName String?
+  createdAt      DateTime @default(now())
+
+  // Relationships
+  sender   User @relation("SentChat", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedChat", fields: [receiverId], references: [id])
+
+  @@map("internal_messages")
+}
